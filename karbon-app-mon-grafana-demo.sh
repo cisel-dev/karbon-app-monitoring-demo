@@ -8,7 +8,7 @@ helm repo update
 kubectl create ns grafana
 
 # install Grafana helm chart
-helm install grafana stable/grafana --namespace grafana -f zzz_monitoring_helmGrafana.yaml
+helm install grafana stable/grafana --namespace grafana -f https://raw.githubusercontent.com/cisel-dev/karbon-app-monitoring-demo/main/karbon-app-mon-grafana-values-demo.yaml
 kubectl -n grafana rollout status deploy/grafana
 export SERVICE_IP=$(kubectl get svc --namespace grafana grafana -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 export GF_PASSWORD=$(kubectl get secret --namespace grafana grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo)
