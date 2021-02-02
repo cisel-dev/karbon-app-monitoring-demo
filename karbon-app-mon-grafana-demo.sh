@@ -1,13 +1,14 @@
 #!/bin/bash
-#GRAFANA INSTALLATION
-# prerequisite helm v3 with stable repo 
+# Grafana installation
+# Prerequisite helm v3 with stable repo 
 helm repo add stable https://kubernetes-charts.storage.googleapis.com
 helm repo update
 
-# create dedicated namespace
+# Create dedicated namespace
 kubectl create ns grafana
 
-# install Grafana helm chart
+# Install Grafana helm chart
+# Please review the values file before applying
 helm install grafana stable/grafana --namespace grafana -f https://raw.githubusercontent.com/cisel-dev/karbon-app-monitoring-demo/main/karbon-app-mon-grafana-values-demo.yaml
 kubectl -n grafana rollout status deploy/grafana
 export SERVICE_IP=$(kubectl get svc --namespace grafana grafana -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
