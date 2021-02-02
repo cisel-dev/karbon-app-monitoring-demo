@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Set label on the system namespace
+# Set label on the system namespace so we can match these labels for the k8s Prometheus
 kubectl label ns/kube-system monitoring=k8s
 kubectl label ns/ntnx-system monitoring=k8s
 
