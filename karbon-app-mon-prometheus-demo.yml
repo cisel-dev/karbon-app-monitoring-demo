@@ -1,0 +1,52 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: apps
+  namespace: monitoring-apps
+  labels:
+    prometheus: apps
+spec:
+  replicas: 1
+  retention: 15d
+  securityContext:
+    fsGroup: 2000
+    runAsNonRoot: true
+    runAsUser: 1000
+  serviceAccountName: prometheus
+  serviceMonitorNamespaceSelector: {}
+  serviceMonitorSelector:
+    matchLabels:
+      monitoring: apps
+  alerting:
+    alertmanagers:
+      - namespace: ntnx-system
+        name: alertmanager-main
+        port: web
+  resources:
+    requests:
+      memory: 400Mi
+  storage:
+    volumeClaimTemplate:
+      spec:
+        resources:
+          requests:
+            storage: 40Gi
+  version: v2.11.0
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: prometheus-apps
+  namespace: monitoring-apps
+  labels:
+    kubernetes.io/cluster-service: "true"
+    prometheus: apps
+spec:
+  ports:
+    - name: web
+      protocol: TCP
+      port: 9090
+      targetPort: web
+  selector:
+    app: prometheus
+    prometheus: apps

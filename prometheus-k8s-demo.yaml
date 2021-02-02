@@ -1,0 +1,54 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  labels:
+    prometheus: k8s
+  name: k8s
+  namespace: ntnx-system
+spec:
+  alerting:
+    alertmanagers:
+    - name: alertmanager-main
+      namespace: ntnx-system
+      port: web
+  baseImage: quay.io/karbon/prometheus
+  nodeSelector:
+    kubernetes.io/os: linux
+  podMonitorSelector: {}
+  replicas: 1
+  resources:
+    limits:
+      cpu: 0.5
+      memory: 1Gi
+    requests:
+      cpu: 0.2
+      memory: 400Mi
+  retention: 15d
+  ruleSelector:
+    matchLabels:
+      prometheus: k8s
+      role: alert-rules
+  secrets:
+  - kube-etcd-client-certs
+  - kubelet-client-certs
+  securityContext:
+    fsGroup: 2000
+    runAsNonRoot: true
+    runAsUser: 1000
+  serviceAccountName: prometheus-k8s
+  serviceMonitorNamespaceSelector:
+    matchLabels:
+      monitoring: k8s
+  serviceMonitorSelector: {}
+  storage:
+    volumeClaimTemplate:
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 30Gi
+        storageClassName: default-storageclass
+  version: v2.11.0
