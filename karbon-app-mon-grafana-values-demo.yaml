@@ -1,0 +1,35 @@
+## Expose the grafana service to be accessed from outside the cluster (LoadBalancer service).
+## or access it from within the cluster (ClusterIP service). Set the service type and the port to serve it.
+## ref: http://kubernetes.io/docs/user-guide/services/
+##
+service:
+  type: ClusterIP
+
+## Enable persistence using Persistent Volume Claims
+## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
+##
+persistence:
+  enabled: true
+  size: 10Gi
+
+## Pass the plugins you want installed as a list.
+##
+plugins:
+  - grafana-piechart-panel
+
+## Configure grafana datasources
+## ref: http://docs.grafana.org/administration/provisioning/#datasources
+##
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus K8s
+        type: prometheus
+        url: http://prometheus-k8s.ntnx-system.svc.cluster.local:9090
+        access: proxy
+        isDefault: true
+      - name: Prometheus Apps
+        type: prometheus
+        url: http://prometheus-apps.monitoring-apps.svc.cluster.local:9090
+        access: proxy
