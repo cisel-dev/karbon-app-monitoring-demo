@@ -30,12 +30,18 @@ Ok, so let's go by hand
 
 The first step is to reconfigure the **Kubernetes Prometheus Instance** so that it only looks at resources with the label ```monitoring: k8s```. To do this we modify the serviceMonitorNamespaceSelector of the Prometheus resource to look for the new label and we set this label on the Kubernetes namespaces so they will still be monitored by this Prometheus instance Source File : [karbon-app-mon-setup-demo.sh](https://raw.githubusercontent.com/cisel-dev/karbon-app-monitoring-demo/main/karbon-app-mon-setup-demo.sh) 
 ```
-# Set label on the system namespace kubectl label ns/kube-system monitoring=k8s kubectl label ns/ntnx-system monitoring=k8s
-# Patch existing prometheus resource to limit ServiceMonitors used kubectl -n ntnx-system patch --type merge prometheus/k8s -p '{"spec":{"serviceMonitorNamespaceSelector":{"matchLabels":{"monitoring": "k8s"}}}}' 
+# Set label on the system namespace 
+kubectl label ns/kube-system monitoring=k8s 
+kubectl label ns/ntnx-system monitoring=k8s
+
+# Patch existing prometheus resource to limit ServiceMonitors used 
+kubectl -n ntnx-system patch --type merge prometheus/k8s -p '{"spec":{"serviceMonitorNamespaceSelector":{"matchLabels":{"monitoring": "k8s"}}}}' 
 ```
 Then we can deploy the new **Application Prometheus Instance** , his ServiceMonitor and required RBAC with the commands below. This will create the ```monitoring-apps``` namespace and deploy all the Prometheus setup inside it. It will also create the ServiceMonitor resource with a selector on the label ```monitoring: apps```. So you will need to add this label to all the services that you want to monitor with this **Prometheus Application Instance**.
 ```
-kubectl apply -f https://raw.githubusercontent.com/cisel-dev/karbon-app-monitoring-demo/main/karbon-app-mon-rbac-demo.yml kubectl apply -f https://raw.githubusercontent.com/cisel-dev/karbon-app-monitoring-demo/main/karbon-app-mon-prometheus-demo.yml kubectl apply -f https://raw.githubusercontent.com/cisel-dev/karbon-app-monitoring-demo/main/karbon-app-mon-service-monitor-demo.yml 
+kubectl apply -f https://raw.githubusercontent.com/cisel-dev/karbon-app-monitoring-demo/main/karbon-app-mon-rbac-demo.yml 
+kubectl apply -f https://raw.githubusercontent.com/cisel-dev/karbon-app-monitoring-demo/main/karbon-app-mon-prometheus-demo.yml 
+kubectl apply -f https://raw.githubusercontent.com/cisel-dev/karbon-app-monitoring-demo/main/karbon-app-mon-service-monitor-demo.yml 
 ```
 **Deploy and configure Grafana**
 The Prometheus setup is now done, we can proceed with the Grafana deployment and configuration. We will deploy Grafana using the official Helm chart.
@@ -47,7 +53,12 @@ Source File : [karbon-app-mon-grafana-demo.sh](https://raw.githubusercontent.com
 # Prerequisite helm v3 with stable repo  helm repo add stable https://kubernetes-charts.storage.googleapis.com helm repo update
 # Create dedicated namespace kubectl create ns grafana
 # Install Grafana helm chart
-# Please review the values file before applying helm install grafana stable/grafana --namespace grafana -f https://raw.githubusercontent.com/cisel-dev/karbon-app-monitoring-demo/main/karbon-app-mon-grafana-values-demo.yaml kubectl -n grafana rollout status deploy/grafana export SERVICE_IP=$(kubectl get svc --namespace grafana grafana -o jsonpath='{.status.loadBalancer.ingress[0].ip}') export GF_PASSWORD=$(kubectl get secret --namespace grafana grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo) echo "you can connect on Grafana http://$SERVICE_IP with admin/$GF_PASSWORD" 
+# Please review the values file before applying 
+helm install grafana stable/grafana --namespace grafana -f https://raw.githubusercontent.com/cisel-dev/karbon-app-monitoring-demo/main/karbon-app-mon-grafana-values-demo.yaml 
+kubectl -n grafana rollout status deploy/grafana 
+export SERVICE_IP=$(kubectl get svc --namespace grafana grafana -o jsonpath='{.status.loadBalancer.ingress[0].ip}') 
+export GF_PASSWORD=$(kubectl get secret --namespace grafana grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo) 
+echo "you can connect on Grafana http://$SERVICE_IP with admin/$GF_PASSWORD" 
 ```
 
 Connect to Grafana using the previous information and check if you can see both Prometheus instances in the Data Sources ![image.png](https://cdn.hashnode.com/res/hashnode/image/upload/v1612278927172/d4jGEz7cv.png)
@@ -56,12 +67,43 @@ Connect to Grafana using the previous information and check if you can see both 
 The one below is serving metrics at the /metrics REST endpoint. Once deployed, the app will be shipping random RPC latencies data to /metrics endpoint. We set the label ```monitoring: apps``` so the metrics will be available in Grafana through the **Application Prometheus Instance**. 
 Source File : [rpc-app-demo.yaml](https://raw.githubusercontent.com/cisel-dev/karbon-app-monitoring-demo/main/rpc-app-demo.yaml) 
 ```
-cat <<EOF | kubectl apply -f - apiVersion: apps/v1 kind: Deployment metadata:   name: rpc-app-deployment   namespace: default   labels:     app: rpc-app spec:   replicas: 2   selector:     matchLabels:       app: rpc-app   template:     metadata:       labels:         app: rpc-app     spec:       containers:
-- name: rpc-app-cont         image: supergiantkir/prometheus-test-app         ports:
-- name: http-metrics           containerPort: 8081
+cat <<EOF | kubectl apply -f - 
+apiVersion: apps/v1 
+kind: Deployment 
+metadata:   
+name: rpc-app-deployment   
+namespace: default   
+labels:     
+app: rpc-app 
+spec:   
+replicas: 2   
+selector:     
+matchLabels:       
+app: rpc-app   
+template:     
+metadata:       
+labels:         
+app: rpc-app     
+spec:       
+containers:
+- name: rpc-app-cont         
+image: supergiantkir/prometheus-test-app         
+ports:
+- name: http-metrics           
+containerPort: 8081
 ---
-kind: Service apiVersion: v1 metadata:   name: rpc-app   labels:     app: rpc-app     monitoring: apps spec:   selector:     app: rpc-app   ports:
-- name: http-metrics     port: 8081
+kind: Service 
+apiVersion: v1 metadata:   
+name: rpc-app   
+labels:     
+app: rpc-app     
+monitoring: apps 
+spec:   
+selector:     
+app: rpc-app   
+ports:
+- name: http-metrics     
+port: 8081
 EOF 
 ```
 The specific specifics **rpc metrics** exposed by the **rpc-app-deployment** are now available in Grafana.
