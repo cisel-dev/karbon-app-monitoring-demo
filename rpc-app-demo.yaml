@@ -1,0 +1,39 @@
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpc-app-deployment
+  namespace: default
+  labels:
+    app: rpc-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rpc-app
+  template:
+    metadata:
+      labels:
+        app: rpc-app
+    spec:
+      containers:
+      - name: rpc-app-cont
+        image: supergiantkir/prometheus-test-app
+        ports:
+        - name: http-metrics
+          containerPort: 8081
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: rpc-app
+  labels:
+    app: rpc-app
+    monitoring: apps
+spec:
+  selector:
+    app: rpc-app
+  ports:
+  - name: http-metrics
+    port: 8081
+EOF
